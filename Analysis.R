@@ -79,13 +79,17 @@ bad_tokens <- c("sowie",
                 "kontakt", "interesse", "kenntnisse", "bereich", "frau", "herr", "erwartet", "erwarten", "mehr", 
                 "berufserfahrung", "jahre", "fragen", "adresse", 
                 "region", "bern", "winterthur", "basel", "luzern", "zusammenarbeit", "zudem", 
-                "stelle", "kenntnis", "bereich", "auskünfte", "setzen")
+                "stelle", "kenntnis", "bereich", "auskünfte", "setzen", "mitarbeitenden", "persönlichkeit", "teams", "freude", "rund", "stellen", "arbeitsweise", "bringen",
+                "teil", "umgang")
 
 sjmm_tokens <- sjmm_tokens %>% tokens_remove(bad_tokens)
 sjmm_tokens <- sjmm_tokens %>% tokens_remove(stopwords("english"))
 sjmm_tokens <- sjmm_tokens %>% tokens_remove(stopwords("french"))
+sjmm_tokens_15 <- tokens_subset(sjmm_tokens, year >=2015)
+sjmm_tokens_20 <- tokens_subset(sjmm_tokens, year ==2020)
 
-sjmm_dfm <- dfm(sjmm_tokens)
+
+sjmm_dfm <- dfm(sjmm_tokens_20)
 textstat_frequency(sjmm_dfm)
 
 sjmm_dtm <-convert(sjmm_dfm, to = "topicmodels")
@@ -101,10 +105,10 @@ othertokks<-
   sjmm_dfm %>% 
   dfm_trim(., sparsity = 0.999) 
 topfeatures(othertokks)
-
+library(topicmodels)
 topfeatures(dtm)
-lda.model_05 <- LDA(dtm, k = 20)
-terms(lda.model_05, 20)
+lda.model_20 <- LDA(dtm, k = 20)
+terms(lda.model_20, 10)
 models <- posterior(lda.model)
 top_text<- as.data.frame(post_dist_top_over_docs)
 post_dist_top_over_docs <- models$topics
@@ -120,7 +124,35 @@ check$documents
 weighted_dfm <- sjmm_dfm %>% 
   dfm_trim(., sparsity = 0.999) %>% dfm_tfidf()
 
-similarity_docs <- textstat_simil(weighted_dfm, method = "jaccard", margin = "documents")
+similarity_docs <- textstat_simil(weighted_dfm, method = "cosine", margin = "documents")
+
+as.matrix(similarity_docs) %>%.[1:10, 1:10]
+install.packages("igraph")
+library(igraph)
 
 
+matt <- as.matrix(similarity_docs)
+maattt <- graph_from_adjacency_matrix(matt, mode = "lower", weighted = TRUE)
+plot(maattt)
 
+
+library(stm)
+dtm_stm <- 
+  sjmm_dfm %>% 
+  dfm_trim(., sparsity = 0.999) %>% 
+  convert(., to = "stm")
+stmmod<-stm(dtm_stm$documents,
+            dtm_stm$vocab,
+          prevalence = ~isco08, 
+          K = 10, 
+          data = select(dtm_stm$meta, isco08), 
+          init.type = "LDA")
+
+stmmod_magic_20<-stm(dtm_stm$documents,
+            dtm_stm$vocab,
+            prevalence = ~maintask + edu1 + edu2, 
+            K = 20, 
+            data = select(dtm_stm$meta, maintask, edu1, edu2), 
+            init.type = "LDA")
+?stm
+labelTopics(stmmod_magic_20, n= 10)
