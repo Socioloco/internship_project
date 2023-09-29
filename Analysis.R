@@ -126,16 +126,26 @@ weighted_dfm <- sjmm_dfm %>%
 
 similarity_docs <- textstat_simil(weighted_dfm, method = "cosine", margin = "documents")
 
-as.matrix(similarity_docs) %>%.[1:10, 1:10]
+rdc<-sample(1:2870, 200)
+mtrrr<-as.matrix(similarity_docs)
+testinggg <- mtrrr[rdc, rdc]
+
 install.packages("igraph")
 library(igraph)
 
 
 matt <- as.matrix(similarity_docs)
-maattt <- graph_from_adjacency_matrix(matt, mode = "lower", weighted = TRUE)
-plot(maattt)
-
-
+maattt <- graph_from_adjacency_matrix(testinggg, mode = "lower", weighted = TRUE, diag = FALSE)
+plot(maattt, vertex.size = 5, vertex.label = NA, edge.width=E(maattt)$weight, layout = layout_with_kk)
+summary(E(maattt)$weight)
+cluster_optimal(maattt)
+c1 = cluster_fast_greedy(maattt)
+plot(c1, maattt, layout=layout_with_fr,vertex.color="black", vertex.size = 5, vertex.label = NA, edge.width=E(maattt)$weight, edge.color ="grey" )
+E(maattt)$new <- 1
+E(maattt)$new[E(maattt)$weight < 0.015] <- 0
+df <-  data.frame(x=E(maattt)$weight)
+ggplot(df, aes(x))+
+  geom_density()
 library(stm)
 dtm_stm <- 
   sjmm_dfm %>% 
